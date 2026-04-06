@@ -11,6 +11,8 @@
 #include <pwd.h>
 #include <sys/wait.h>
 #include <time.h>
+#include <signal.h>
+#include <errno.h>
 
 
 // --------------- FUNÇÕES PARA FUNCIONALIDADE BÁSICA DO SHELL ---------------
@@ -87,16 +89,25 @@ void fork_and_exec(char* file, char* argv[]) {
 }
 
 // --------------- FUNÇÕES PARA CHAMAR BUILT-INS COM SYSCALLS ---------------
-// format_kill_output
+void kill_syscall(char* argv[]) {
+    int exit_code;
+    int signal = strtol(argv[1]+1, NULL, 10); //+1 tira o traço da flag, necessário para a syscall
+    pid_t pid = (pid_t) strtol(argv[2], NULL, 10);
 
-// kill_bltin
-// kill -<sinal> <pid>
-// se pid não existe
-// usuário não tem permissão para enviar sinal para o processo
+    exit_code = kill(pid, signal); // kill(2) é listado como syscall na sua manpage
+    if(exit_code == 0) return;
+    
+    if (errno == EPERM) {
+        printf("imesh: kill: (%d) - Operation not permitted\n", pid);
+    } else if (errno == ESRCH) {
+        printf("imesh: kill: (%d) - No such process\n", pid);
+    }
+}
+
 
 void get_date_syscall() {
     time_t seconds;
-    seconds = time(NULL); // time(2) é listada como syscall na sua manpage
+    seconds = time(NULL); // time(2) é listado como syscall na sua manpage
     printf("%ld\n", seconds);
 }
 
@@ -144,6 +155,7 @@ int execute_line(char* line) {
             get_date_syscall();
             break;
         case 5:
+            kill_syscall(args_list);
             break;
     }
 
