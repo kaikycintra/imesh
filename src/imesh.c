@@ -5,22 +5,53 @@
 #include <stdlib.h>
 #include <readline/readline.h>
 #include <readline/history.h>
-
-// executáveis
-char exec_ls[] = "/bin/ls -1aF --color=never";
-char exec_top[] = "/bin/top -b -n 1 -p 1";
-char exec_ep1[] = "./ep1"; // precisa receber os argumentos
-
-// embutidos (implementados com chamada de sistema específica)
-char pwd[] = "pwd";
-char date[] = "date +%s";
-char kill[] = "kill"; // precisa receber -<sinal> e <pid>
+#include <sys/utsname.h>
+#include <linux/limits.h>
+#include <sys/types.h>
+#include <pwd.h>
 
 // --------------- FUNÇÕES PARA FUNCIONALIDADE BÁSICA DO SHELL ---------------
-// shell precisa ter uma localização
+char* get_username_syscall() {
+    struct passwd *result;
+    uid_t uid = getuid(); // syscall
+    result = getpwuid(uid);
+    return result->pw_name;
+}
 
-// "[<nome_usuário>@<nome_computador>:<diretório_atual>]$ "<comando>
-// chamadas de sistema para obter as variáveis acima
+char* get_computer_name_syscall() {
+    struct utsname result;
+    uname(&result); // syscall
+    return strdup(result.nodename);
+}
+
+char* get_current_dir_syscall() {
+    char* buffer = malloc(PATH_MAX);
+    return getcwd(buffer, PATH_MAX); // syscall
+}
+
+char* generate_terminal_prompt() {
+    // gera prompt no formato "[<nome_usuário>@<nome_computador>:<diretório_atual>]$ "
+    char *username, *computer_name, *current_dir, *prompt;
+
+
+    username = get_username_syscall();
+    current_dir = get_current_dir_syscall();
+    computer_name = get_computer_name_syscall();
+    
+    // prompt tem 6 bytes de caracteres hardcoded
+    prompt = malloc(6 + strlen(username) + strlen(computer_name) + strlen(current_dir));
+
+    strcat(prompt, "[");
+    strcat(prompt, username);
+    strcat(prompt, "@");
+    strcat(prompt, computer_name);
+    strcat(prompt, ":");
+    strcat(prompt, current_dir);
+    strcat(prompt, "]");
+    strcat(prompt, "$ ");
+
+    return prompt;
+}
 
 // command_type (acha tipo de comando da linha)
 
@@ -32,20 +63,27 @@ char kill[] = "kill"; // precisa receber -<sinal> e <pid>
 
 // format_kill_output
 
-// --------------- FUNÇÕES PARA CHAMAR BUILT-INS ---------------
-// pwd_bltin
+// executáveis
+char exec_ls[] = "/bin/ls -1aF --color=never";
+char exec_top[] = "/bin/top -b -n 1 -p 1";
+char exec_ep1[] = "./ep1"; // precisa receber os argumentos
 
+// --------------- FUNÇÕES PARA CHAMAR BUILT-INS COM SYSCALLS ---------------
 // kill_bltin
+// kill -<sinal> <pid>
 // se pid não existe
 // usuário não tem permissão para enviar sinal para o processo
 
 // date_bltin
+// date +%s
 
 // --------------- FUNÇÃO PRINCIPAL ---------------
 int main() {
     while(true) {
-        char *line, *s;
-        line = readline("insira seu comando: ");
+        char *line, *s, *prompt;
+
+        prompt = generate_terminal_prompt();
+        line = readline(prompt);
 
         if (!line)
             break;
