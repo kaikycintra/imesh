@@ -84,8 +84,6 @@ void fork_and_exec(char* file, char* argv[]) {
     }
 }
 
-// format_kill_output
-
 void exec_ls(char** args) {
     char ls_path[] = "/bin/ls";
     fork_and_exec(ls_path, args);
@@ -96,6 +94,8 @@ char exec_top[] = "/bin/top -b -n 1 -p 1";
 char exec_ep1[] = "./ep1"; // precisa receber os argumentos
 
 // --------------- FUNÇÕES PARA CHAMAR BUILT-INS COM SYSCALLS ---------------
+// format_kill_output
+
 // kill_bltin
 // kill -<sinal> <pid>
 // se pid não existe
@@ -144,6 +144,7 @@ int execute_line(char* line) {
         case 2:
             break;
         case 3:
+            printf("%s\n", get_current_dir_syscall());
             break;
         case 4:
             break;
