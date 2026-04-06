@@ -1,0 +1,64 @@
+fontes:
+https://utat-ss.readthedocs.io/en/master/c-programming/c_h_files.html
+https://utat-ss.readthedocs.io/en/master/c-programming/header-files.html#define
+
+https://makefiletutorial.com/
+
+https://www.w3schools.com/c/c_strings.php
+
+man date
+
+https://unix.stackexchange.com/questions/11454/what-is-the-difference-between-a-builtin-command-and-one-that-is-not
+
+https://www.w3schools.com/c/c_booleans.php
+
+https://www.geeksforgeeks.org/c/sleep-function-in-c/
+
+https://stackoverflow.com/questions/7965437/undefined-reference-to-main-collect2-ld-returned-1-exit-status
+
+
+https://web.mit.edu/gnu/doc/html/rlman_2.html
+https://stackoverflow.com/questions/3783149/how-do-i-properly-reference-the-gnu-readline-library-to-scan-terminal-input
+https://stackoverflow.com/questions/38792542/readline-h-history-usage-in-c
+https://tiswww.case.edu/php/chet/readline/readline.html
+
+https://en.wikibooks.org/wiki/C_Programming/String_manipulation
+
+man syscalls
+https://www.ime.usp.br/~kon/MAC211/syscalls.html
+
+man getuid
+man whoami
+man id
+https://www.geeksforgeeks.org/c/exec-family-of-functions-in-c/
+https://www.geeksforgeeks.org/c/wait-system-call-c/
+
+https://man7.org/linux/man-pages/man2/gethostname.2.html
+man gethostname
+man uname
+man uname\(2\)
+man uname\(3\)
+
+https://www.w3schools.com/c/c_structs.php
+https://stackoverflow.com/questions/26717709/how-we-can-call-a-system-function-like-pwd-or-ls-l-without-using-system-or-ex
+man getcwd
+https://stackoverflow.com/questions/9449241/where-is-path-max-defined-in-linux
+
+https://stackoverflow.com/questions/61899571/my-syscall-cause-segmentation-fault-core-dumped
+man calloc
+https://man7.org/linux/man-pages/man2/execve.2.html
+https://www.geeksforgeeks.org/c/array-of-strings-in-c/
+https://www.w3schools.com/c/c_switch.php
+
+https://stackoverflow.com/questions/32942123/substring-from-index-1-until-the-end-of-string
+https://stackoverflow.com/questions/4513316/split-string-in-c-every-white-space
+https://stackoverflow.com/questions/4160273/strtok-with-space-delimiter
+
+https://filippo.io/linux-syscall-table/
+man signal
+man kill(2)
+https://www.ic.unicamp.br/~celio/mc514/linux/linux_pgsignals.html
+https://www.cyberciti.biz/faq/bash-get-exit-code-of-command/
+https://serverfault.com/questions/366474/whats-a-proper-way-of-checking-if-a-pid-is-running
+https://www.geeksforgeeks.org/c/convert-string-to-int-in-c/
+https://man7.org/linux/man-pages/man3/errno.3.html
