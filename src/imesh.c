@@ -103,31 +103,25 @@ void get_date_syscall() {
 // --------------- MAPEAMENTO E EXECUÇÃO DE COMANDOS ---------------
 
 int execute_line(char* line) {    
-    // a busca por comando é ineficiente e desorganizada, mas funciona perfeitamente para 6 comandos
-    int command_match = -1, i = 0;
+    // a busca por comando é linear, mas funciona perfeitamente para 6 comandos
     char *commands[] = {"/bin/ls", "/bin/top", "./ep1", "pwd", "date", "kill"};
-    int commands_len = sizeof(commands)/sizeof(char*);
-    int *command_lengths = (int*) malloc(commands_len * sizeof(int));
+    int commands_len = sizeof(commands)/sizeof(char*), command_match = -1;
+
+    // MATCH DO COMANDO ----------------------
+    char *copy_buffer = malloc(sizeof(line));
+    strcpy(copy_buffer, line);
+    char *command = strtok(copy_buffer, " ");
 
     for(int j = 0; j < commands_len; j++) {
-        command_lengths[j] = strlen(commands[j]);
-    }
-    
-    int max_len_commands = 8;
-
-    char* buf = calloc(max_len_commands, 1);
-    i = 3; // busca começa com tamanho da menor string de comando e vai até tamanho da maior
-    while(i <= max_len_commands && command_match == -1) {
-        strncpy(buf, line, i);
-        for(int j = 0; j < commands_len; j++) {
-            if(strcmp(buf, commands[j]) == 0) {
-                command_match = j;
-            }
+        if(strcmp(command, commands[j]) == 0) {
+            command_match = j;
         }
-        i++;
     }
-    
+
+    free(copy_buffer);
     if(command_match == -1) return -1;
+
+    // EXECUÇÃO DO COMANDO ENCONTRADO ----------------------
 
     char** args_list = parse_args(line);   
 
@@ -142,7 +136,9 @@ int execute_line(char* line) {
             fork_and_exec("./ep1", args_list);
             break;
         case 3:
-            printf("%s\n", get_current_dir_syscall());
+            char* cwd = get_current_dir_syscall();     
+            printf("%s\n", cwd);
+            free(cwd);
             break;
         case 4:
             get_date_syscall();
@@ -151,6 +147,7 @@ int execute_line(char* line) {
             break;
     }
 
+    free(args_list);
     return 0;
 }
 
