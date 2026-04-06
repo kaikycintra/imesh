@@ -33,13 +33,12 @@ char* generate_terminal_prompt() {
     // gera prompt no formato "[<nome_usuário>@<nome_computador>:<diretório_atual>]$ "
     char *username, *computer_name, *current_dir, *prompt;
 
-
     username = get_username_syscall();
     current_dir = get_current_dir_syscall();
     computer_name = get_computer_name_syscall();
     
-    // prompt tem 6 bytes de caracteres hardcoded
-    prompt = malloc(6 + strlen(username) + strlen(computer_name) + strlen(current_dir));
+    // prompt tem 6 bytes de caracteres hardcoded + \0
+    prompt = calloc(7 + strlen(username) + strlen(computer_name) + strlen(current_dir), sizeof(char));
 
     strcat(prompt, "[");
     strcat(prompt, username);
@@ -50,6 +49,7 @@ char* generate_terminal_prompt() {
     strcat(prompt, "]");
     strcat(prompt, "$ ");
 
+    free(current_dir);
     return prompt;
 }
 
@@ -95,6 +95,7 @@ int main() {
             printf("<%s>\n", s);
         }
 
+        free(prompt);
         free(line);
     }
 
