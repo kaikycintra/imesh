@@ -93,8 +93,14 @@ int execute_line(char* line) {
     // a busca por comando é ineficiente e desorganizada, mas funciona perfeitamente para 6 comandos
     int command_match = -1, i = 0;
     char *commands[] = {"/bin/ls", "/bin/top", "./ep1", "pwd", "date", "kill"};
-    int max_len_commands = 8;
     int commands_len = sizeof(commands)/sizeof(char*);
+    int *command_lengths = (int*) malloc(commands_len * sizeof(int));
+
+    for(int j = 0; j < commands_len; j++) {
+        command_lengths[j] = strlen(commands[j]);
+    }
+    
+    int max_len_commands = 8;
 
     char* buf = calloc(max_len_commands, 1);
     i = 3; // busca começa com tamanho da menor string de comando e vai até tamanho da maior
@@ -109,6 +115,10 @@ int execute_line(char* line) {
     }
     
     if(command_match == -1) return -1;
+
+    char args[30];
+    strcpy(args, line+command_lengths[command_match]+1);
+    // obtém argumentos fazendo um corte da string digitada a partir da string de comando
 
     switch (command_match) {
         case 0:
