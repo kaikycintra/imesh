@@ -84,15 +84,6 @@ void fork_and_exec(char* file, char* argv[]) {
     }
 }
 
-void exec_ls(char** args) {
-    char ls_path[] = "/bin/ls";
-    fork_and_exec(ls_path, args);
-}
-
-// executáveis
-char exec_top[] = "/bin/top -b -n 1 -p 1";
-char exec_ep1[] = "./ep1"; // precisa receber os argumentos
-
 // --------------- FUNÇÕES PARA CHAMAR BUILT-INS COM SYSCALLS ---------------
 // format_kill_output
 
@@ -137,11 +128,13 @@ int execute_line(char* line) {
 
     switch (command_match) {
         case 0:
-            exec_ls(args_list);
+            fork_and_exec("/bin/ls", args_list);
             break;
         case 1:
+            fork_and_exec("/bin/top", args_list);
             break;
         case 2:
+            fork_and_exec("./ep1", args_list);
             break;
         case 3:
             printf("%s\n", get_current_dir_syscall());
