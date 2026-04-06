@@ -54,6 +54,24 @@ char* generate_terminal_prompt() {
     return prompt;
 }
 
+char** parse_args(char* string) {
+    // divide uma string que contém até 9 espaços vazios
+    // permite guardar 10 argumentos, nome do comando, e NULL (como pedem as funções exec*)
+    char** arg_list = malloc(12 * sizeof(char*)); 
+    int i = 0;
+
+    char* token = strtok(string, " ");
+
+    while (token != NULL && i < 10) {
+        arg_list[i] = token;
+        i++;
+        token = strtok(NULL, " ");
+    }
+
+    arg_list[i] = NULL;
+    return arg_list;
+}
+
 // --------------- FUNÇÕES PARA CHAMAR EXECUTÁVEIS ---------------
 
 // função para fork de executável com argumentos
@@ -68,10 +86,9 @@ void fork_and_exec(char* file, char* argv[]) {
 
 // format_kill_output
 
-void exec_ls() {
+void exec_ls(char** args) {
     char ls_path[] = "/bin/ls";
-    char *ls_params[] = {"ls", "-1aF", "--color=never", NULL}; 
-    fork_and_exec(ls_path, ls_params);
+    fork_and_exec(ls_path, args);
 }
 
 // executáveis
@@ -116,13 +133,11 @@ int execute_line(char* line) {
     
     if(command_match == -1) return -1;
 
-    char args[30];
-    strcpy(args, line+command_lengths[command_match]+1);
-    // obtém argumentos fazendo um corte da string digitada a partir da string de comando
+    char** args_list = parse_args(line);   
 
     switch (command_match) {
         case 0:
-            exec_ls();
+            exec_ls(args_list);
             break;
         case 1:
             break;
