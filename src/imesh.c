@@ -119,7 +119,7 @@ int execute_line(char* line) {
     int commands_len = sizeof(commands)/sizeof(char*), command_match = -1;
 
     // MATCH DO COMANDO ----------------------
-    char *copy_buffer = malloc(sizeof(line));
+    char *copy_buffer = malloc(strlen(line)+1);
     strcpy(copy_buffer, line);
     char *command = strtok(copy_buffer, " ");
 
