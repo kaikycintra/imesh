@@ -10,6 +10,8 @@
 #include <sys/types.h>
 #include <pwd.h>
 #include <sys/wait.h>
+#include <time.h>
+
 
 // --------------- FUNÇÕES PARA FUNCIONALIDADE BÁSICA DO SHELL ---------------
 char* get_username_syscall() {
@@ -72,7 +74,7 @@ char** parse_args(char* string) {
     return arg_list;
 }
 
-// --------------- FUNÇÕES PARA CHAMAR EXECUTÁVEIS ---------------
+// --------------- FUNÇÃO PARA CHAMAR EXECUTÁVEIS ---------------
 
 // função para fork de executável com argumentos
 void fork_and_exec(char* file, char* argv[]) {
@@ -92,8 +94,11 @@ void fork_and_exec(char* file, char* argv[]) {
 // se pid não existe
 // usuário não tem permissão para enviar sinal para o processo
 
-// date_bltin
-// date +%s
+void get_date_syscall() {
+    time_t seconds;
+    seconds = time(NULL); // time(2) é listada como syscall na sua manpage
+    printf("%ld\n", seconds);
+}
 
 // --------------- MAPEAMENTO E EXECUÇÃO DE COMANDOS ---------------
 
@@ -140,6 +145,7 @@ int execute_line(char* line) {
             printf("%s\n", get_current_dir_syscall());
             break;
         case 4:
+            get_date_syscall();
             break;
         case 5:
             break;
