@@ -2,6 +2,9 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 
 // executáveis
 char exec_ls[] = "/bin/ls -1aF --color=never";
@@ -16,11 +19,12 @@ char kill[] = "kill"; // precisa receber -<sinal> e <pid>
 // --------------- FUNÇÕES PARA FUNCIONALIDADE BÁSICA DO SHELL ---------------
 // shell precisa ter uma localização
 
-// rolagem de linhas com setas do teclado
-
-// imprime_linha
-// chamadas de sistema para o nome
 // "[<nome_usuário>@<nome_computador>:<diretório_atual>]$ "<comando>
+// chamadas de sistema para obter as variáveis acima
+
+// command_type (acha tipo de comando da linha)
+
+// execute_line(line, command_type)
 
 // --------------- FUNÇÕES PARA CHAMAR EXECUTÁVEIS ---------------
 
@@ -40,8 +44,20 @@ char kill[] = "kill"; // precisa receber -<sinal> e <pid>
 // --------------- FUNÇÃO PRINCIPAL ---------------
 int main() {
     while(true) {
-        sleep(1);
-        
+        char *line, *s;
+        line = readline("insira seu comando: ");
+
+        if (!line)
+            break;
+
+        s = line;
+
+        if (*s) {
+            add_history(s);
+            printf("<%s>\n", s);
+        }
+
+        free(line);
     }
 
     return 0;
