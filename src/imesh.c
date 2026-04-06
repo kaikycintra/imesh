@@ -9,6 +9,7 @@
 #include <linux/limits.h>
 #include <sys/types.h>
 #include <pwd.h>
+#include <sys/wait.h>
 
 // --------------- FUNÇÕES PARA FUNCIONALIDADE BÁSICA DO SHELL ---------------
 char* get_username_syscall() {
@@ -53,18 +54,27 @@ char* generate_terminal_prompt() {
     return prompt;
 }
 
-// command_type (acha tipo de comando da linha)
-
-// execute_line(line, command_type)
-
 // --------------- FUNÇÕES PARA CHAMAR EXECUTÁVEIS ---------------
 
 // função para fork de executável com argumentos
+void fork_and_exec(char* file, char* argv[]) {
+    pid_t pid = fork();
+    if(pid == 0) {
+        execve(file, argv, NULL);
+    } else {
+        pid = wait(NULL);
+    }
+}
 
 // format_kill_output
 
+void exec_ls() {
+    char ls_path[] = "/bin/ls";
+    char *ls_params[] = {"ls", "-1aF", "--color=never", NULL}; 
+    fork_and_exec(ls_path, ls_params);
+}
+
 // executáveis
-char exec_ls[] = "/bin/ls -1aF --color=never";
 char exec_top[] = "/bin/top -b -n 1 -p 1";
 char exec_ep1[] = "./ep1"; // precisa receber os argumentos
 
@@ -77,7 +87,50 @@ char exec_ep1[] = "./ep1"; // precisa receber os argumentos
 // date_bltin
 // date +%s
 
+// --------------- MAPEAMENTO E EXECUÇÃO DE COMANDOS ---------------
+
+int execute_line(char* line) {    
+    // a busca por comando é ineficiente e desorganizada, mas funciona perfeitamente para 6 comandos
+    int command_match = -1, i = 0;
+    char *commands[] = {"/bin/ls", "/bin/top", "./ep1", "pwd", "date", "kill"};
+    int max_len_commands = 8;
+    int commands_len = sizeof(commands)/sizeof(char*);
+
+    char* buf = calloc(max_len_commands, 1);
+    i = 3; // busca começa com tamanho da menor string de comando e vai até tamanho da maior
+    while(i <= max_len_commands && command_match == -1) {
+        strncpy(buf, line, i);
+        for(int j = 0; j < commands_len; j++) {
+            if(strcmp(buf, commands[j]) == 0) {
+                command_match = j;
+            }
+        }
+        i++;
+    }
+    
+    if(command_match == -1) return -1;
+
+    switch (command_match) {
+        case 0:
+            exec_ls();
+            break;
+        case 1:
+            break;
+        case 2:
+            break;
+        case 3:
+            break;
+        case 4:
+            break;
+        case 5:
+            break;
+    }
+
+    return 0;
+}
+
 // --------------- FUNÇÃO PRINCIPAL ---------------
+
 int main() {
     while(true) {
         char *line, *s, *prompt;
@@ -92,8 +145,12 @@ int main() {
 
         if (*s) {
             add_history(s);
-            printf("<%s>\n", s);
         }
+
+        if(execute_line(line) == -1) {
+            printf("Comando não encontrado\n");
+        }
+        
 
         free(prompt);
         free(line);
