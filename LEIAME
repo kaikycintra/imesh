@@ -1,3 +1,7 @@
 Para compilar os programas ep1 e imesh basta rodar o comando `make all`.
 Os programas depois podem ser executados com `./ep1` e `./imesh`.
 
+Para executar o escalonador:
+./ep1 <modo_escalonador> <caminho_entrada> <caminho_saída>
+
+O <modo_escalonador> é um int com valor 0 para SJF, 1 para Round Robin e 2 para Escalonamento com Prioridade

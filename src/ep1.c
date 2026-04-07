@@ -9,6 +9,7 @@
 #define MAX_TASK_NUM 50
 #define WORK_UNIT 100 // intervalo de verificação de preempção em ms, equivalente a unidade de trabalho
 #define WORKERS 1
+#define RR_QUANTUM 500 // em ms
 
 // --------------- VARIÁVEIS GLOBAIS DAS THREADS ---------------
 
@@ -18,6 +19,9 @@ static int die = 0;
 
 int total_tasks = 0;
 double current_sim_time;
+
+int last_rr_index = -1;
+int preemption_count = 0;
 
 typedef struct {
     char name[32];
@@ -33,7 +37,6 @@ typedef struct {
     double time_left;
     bool running;
     bool started;
-    bool preempted;
     bool finished;
 } Task;
 Task* global_tasks = NULL;
@@ -61,7 +64,6 @@ Task* tasks_from_trace(char* filename, int* num_tasks) {
         queue[count].time_left = queue[count].dt;
         queue[count].running = false;
         queue[count].started = false;
-        queue[count].preempted = false;
         queue[count].finished = false;
 
         count++;
@@ -99,14 +101,15 @@ void show_output(char* filename) {
                 global_tasks[i].tf, 
                 tr);
     }
+
+    if(preemption_count != -1) {
+        fprintf(out_fp, "%d\n",  preemption_count);
+    }
     
     fclose(out_fp);
 }
 
 // --------------- ALGORITMOS DO ESCALONADOR ---------------
-
-// round robin
-// escalonamento com prioridade
 
 // retorna o índice da próxima task a ser executada no sjf
 int get_next_sjf_task(Task* tasks, int num_tasks, double current_time) {
@@ -137,7 +140,7 @@ void sjf_scheduling(int* busy_workers) {
     }
 }
 
-void* sleeper_thread(void* arg) {
+void* sjf_thread(void* arg) {
     while(true) {
         Task* t = NULL;
 
@@ -174,6 +177,80 @@ void* sleeper_thread(void* arg) {
     return NULL;
 }
 
+int get_next_rr_task(Task* tasks, int num_tasks, double current_time) {
+    for (int i = 1; i <= num_tasks; i++) {
+        int idx = (last_rr_index + i) % num_tasks;
+
+        if (tasks[idx].t0 <= current_time &&
+            !tasks[idx].finished &&
+            !tasks[idx].running) {
+
+            last_rr_index = idx;
+            return idx;
+        }
+    }
+
+    return -1;
+}
+
+void rr_scheduling(int* busy_workers) {
+    int next_task = get_next_rr_task(global_tasks, total_tasks, current_sim_time);
+    if (next_task != -1) {
+        global_tasks[next_task].running = true; // marca a task para execução
+        (*busy_workers)++;
+        pthread_cond_signal(&available); // Acorda um worker
+    } else {
+        // Força a saída do loop de escalonamento se não houver nada pronto
+        *busy_workers = WORKERS; 
+    }
+}
+
+void* rr_thread(void* arg) {
+    while(true) {
+        Task* t = NULL;
+
+        pthread_mutex_lock(&task_lock);
+        while(!die) {  // enquanto main(produtor) não para as threads
+            for(int i = 0; i < total_tasks; i++) {
+                if(global_tasks[i].running && !global_tasks[i].started) {
+                    t = &global_tasks[i];
+                    t->started = true;
+                    break;
+                }
+            }
+            if (t || die) break;
+            pthread_cond_wait(&available, &task_lock);
+        }
+        pthread_mutex_unlock(&task_lock);
+
+        if(die) break; // 'mata' worker
+
+        // trabalha entre um WORK_UNIT e um RR_QUANTUM
+        if(t) {
+            double work_done = 0;
+            while (t->time_left > 0 && work_done < RR_QUANTUM) {
+                usleep(WORK_UNIT * 1000);
+                t->time_left -= (double)WORK_UNIT / 1000.0;
+                t->running_time += (double)WORK_UNIT / 1000.0;
+                work_done += (double)WORK_UNIT;
+            }
+
+            pthread_mutex_lock(&task_lock);
+            if (t->time_left > 0) { // preempção
+                t->running = false;
+                t->started = false;
+                preemption_count++;
+            } else {                // finalização
+                t->finished = true;
+                t->running = false;
+                t->tf = current_sim_time; 
+            }
+            pthread_mutex_unlock(&task_lock);
+        }
+    }
+    return NULL;
+}
+
 // --------------- SEÇÃO PRINCIPAL ---------------
 
 // argv[1], algoritmo do escalonador, de 0 a 2
@@ -192,7 +269,13 @@ int main(int argc, char **argv) {
     // inicializa workers com sleeper_threads
     pthread_t workers[WORKERS];
     for (int i = 0; i < WORKERS; i++) {
-        pthread_create(&workers[i], NULL, sleeper_thread, NULL);
+        if(sched_method == 0) {
+            pthread_create(&workers[i], NULL, sjf_thread, NULL);
+        } else if(sched_method == 1) {
+            pthread_create(&workers[i], NULL, rr_thread, NULL);
+        } else if(sched_method == 2) {
+            printf("oi");
+        }
     }
 
     // loop de execução produtor consumidor
@@ -211,7 +294,7 @@ int main(int argc, char **argv) {
             if(sched_method == 0) {
                 sjf_scheduling(&busy_workers);
             } else if(sched_method == 1) {
-                printf("oi");
+                rr_scheduling(&busy_workers);
             } else if(sched_method == 2) {
                 printf("oi");
             }
