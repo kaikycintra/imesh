@@ -4,8 +4,19 @@
 #include <unistd.h>
 #include <time.h>
 #include <stdbool.h>
+#include <pthread.h>
 
 #define MAX_TASK_NUM 50
+#define WORK_UNIT 100 // intervalo de verificação de preempção em ms, equivalente a unidade de trabalho
+#define WORKERS 1
+
+// --------------- VARIÁVEIS GLOBAIS DAS THREADS ---------------
+
+pthread_mutex_t task_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t  available = PTHREAD_COND_INITIALIZER;
+static int work = 0;
+static int die = 0;
+int next_tasks[WORKERS];    // tasks no topo da fila de prontos
 
 // --------------- LÓGICA DE ENTRADA ---------------
 typedef struct {
@@ -18,6 +29,7 @@ typedef struct {
     double time_left;
     double tf;
     bool active;
+    bool preempted;
     bool is_finished;
 } Task;
 
@@ -52,12 +64,10 @@ Task* tasks_from_trace(char* filename, int* num_tasks) {
 
 void show_tasks(Task* tasks, int num_tasks) {
     for(int i=0; i < num_tasks; i++) {
-            printf("task: %s | deadline: %.1f | t0: %.1f | dt: %.1f\n", 
-                    tasks[i].name, tasks[i].deadline, tasks[i].t0, tasks[i].dt);
-        }
+        printf("task: %s | deadline: %.1f | t0: %.1f | dt: %.1f\n", 
+            tasks[i].name, tasks[i].deadline, tasks[i].t0, tasks[i].dt);
+    }
 }
-
-
 
 // --------------- LÓGICA DE SAÍDA ---------------
 
@@ -73,17 +83,74 @@ void show_tasks(Task* tasks, int num_tasks) {
 // round robin
 // escalonamento com prioridade
 
+// coloca tasks mais curtas em next_tasks
+int* sjf_sort(Task* tasks, int num_tasks) {
+    for(int i=0; i < num_tasks; i++) {
+        printf("task: %s | deadline: %.1f | t0: %.1f | dt: %.1f\n", 
+            tasks[i].name, tasks[i].deadline, tasks[i].t0, tasks[i].dt);
+    }
+}
+
+void* sleeper_thread() {
+    int ret = 0;
+
+    while(true) {
+        ret = pthread_mutex_lock(&task_lock);
+        
+        while(work == 0 && !die) {
+            ret = pthread_cond_wait(&available, &task_lock);
+        }
+
+        if(die) {
+            pthread_mutex_unlock(&task_lock);
+            break;
+        }
+
+        if(work > 0) {  // trabalha até acabar ou sofrer preempção
+            node_t * temp = head;
+            task->active = true;
+
+            while(task->time_left > 0 && !task->preempted) {
+                usleep(WORK_UNIT * 1000); // trabalha 100ms e checa preempção
+                task->time_left = task->time_left - WORK_UNIT/1000;
+            }
+
+            task->active = false;
+        }
+
+        pthread_mutex_unlock(&task_lock);
+    }
+
+    return NULL;
+}
+
 // --------------- SEÇÃO PRINCIPAL ---------------
 
-// arg1, algoritmo do escalonador, de 0 a 2
-// arg2, arquivo trace de entrada
-// arg3, arquivo a ser criado para saída
+// argv[1], algoritmo do escalonador, de 0 a 2
+    // 0 é SJF, 1 é RR, 2 é prioridade
+// argv[2], arquivo trace de entrada
+// argv[3], arquivo a ser criado para saída
 int main(int argc, char **argv) {
-    int num_tasks = 0;
+    int num_tasks = 0, sched_method = atoi(argv[1]);
     Task* tasks = tasks_from_trace(argv[2], &num_tasks);
 
     if (tasks != NULL) {
-        show_tasks(tasks, num_tasks);
+        // loop do scheduler
+        while(true) {
+    
+            // adiciona processo pelo timer
+            switch(sched_method) {
+                case 0:
+                    sjf_sort(tasks, num_tasks);
+                    // pthread_cond_broadcast()
+                    break;
+                case 1:
+                    break;
+                case 2:
+                    break;
+                
+            }
+        }
         free(tasks);
     }
     return 0;

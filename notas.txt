@@ -68,3 +68,4 @@ https://sites.cs.ucsb.edu/~rich/class/old.cs170/notes/Threads/index.html
 https://stackoverflow.com/questions/72625285/preempt-a-hot-loop-thread-from-user-space
 https://pubs.opengroup.org/onlinepubs/009604599/functions/pthread_cond_timedwait.html
 https://stackoverflow.com/questions/3501338/c-read-file-line-by-line
+https://techfortalk.co.uk/2025/03/08/building-a-multi-threaded-task-queue-with-pthreads/
