@@ -84,6 +84,22 @@ void show_tasks(Task* tasks, int num_tasks) {
 // nome é o identificador do processo
 // tf é quando terminou a execução
 // tr é o tempo de relógio, tf-t0
+void show_output(char* filename) {
+    FILE *out_fp = fopen(filename, "w");
+    
+    for (int i = 0; i < total_tasks; i++) {
+        int cumpriu = (global_tasks[i].tf <= global_tasks[i].deadline) ? 1 : 0;
+        double tr = global_tasks[i].tf - global_tasks[i].t0;
+    
+        fprintf(out_fp, "%d %s %.1f %.1f\n", 
+                cumpriu, 
+                global_tasks[i].name, 
+                global_tasks[i].tf, 
+                tr);
+    }
+    
+    fclose(out_fp);
+}
 
 // --------------- ALGORITMOS DO ESCALONADOR ---------------
 
@@ -145,7 +161,7 @@ void* sleeper_thread(void* arg) {
             pthread_mutex_lock(&task_lock);
             t->finished = true;
             t->running = false;
-            //t->tf = time();
+            t->tf = current_sim_time;
             pthread_mutex_unlock(&task_lock);
         }
     }
@@ -190,19 +206,19 @@ int main(int argc, char **argv) {
                 printf("oi");
             }
         }
-    }
-    
-    pthread_mutex_unlock(&task_lock);
+        
+        pthread_mutex_unlock(&task_lock);
 
-    // avança tempo global
-    usleep(WORK_UNIT * 1000);
-    current_sim_time += (double)WORK_UNIT / 1000.0;
+        // avança tempo global
+        usleep(WORK_UNIT * 1000);
+        current_sim_time += (double)WORK_UNIT / 1000.0;
+    }
 
     die = 1;
     pthread_cond_broadcast(&available); // faz broadcast com die para encerrar workers
     for (int i = 0; i < WORKERS; i++) pthread_join(workers[i], NULL);
 
-    // escrever no arquivo de saída a partir de global_tasks
+    show_output(argv[3]);
     
     free(global_tasks);
     return 0;
