@@ -16,17 +16,15 @@ pthread_mutex_t task_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t  available = PTHREAD_COND_INITIALIZER;
 static int die = 0;
 
-Task* global_tasks = NULL;
 int total_tasks = 0;
 double current_sim_time;
 
-// --------------- LÓGICA DE ENTRADA ---------------
 typedef struct {
     char name[32];
     double t0;
     double deadline;
     double dt;
-
+    
     // dados a serem salvos durante execução
     double tf;
 
@@ -37,6 +35,9 @@ typedef struct {
     bool preempted;
     bool finished;
 } Task;
+Task* global_tasks = NULL;
+
+// --------------- LÓGICA DE ENTRADA ---------------
 
 Task* tasks_from_trace(char* filename, int* num_tasks) {
     FILE *fp = fopen(filename, "r");
@@ -86,7 +87,6 @@ void show_tasks(Task* tasks, int num_tasks) {
 
 // --------------- ALGORITMOS DO ESCALONADOR ---------------
 
-// shortest job first
 // round robin
 // escalonamento com prioridade
 
@@ -104,6 +104,16 @@ int get_next_sjf_task(Task* tasks, int num_tasks, double current_time) {
         }
     }
     return best_index;
+}
+
+// shortest job first
+void sjf_scheduling(int* busy_workers) {
+    int next_task = get_next_sjf_task(global_tasks, total_tasks, current_sim_time);
+    if (next_task != -1) {
+        global_tasks[next_task].running = true; // marca a task para execução
+        busy_workers++;
+        pthread_cond_signal(&available); // Acorda um worker
+    } // índice -1 = não há task na fila
 }
 
 void* sleeper_thread(void* arg) {
@@ -172,21 +182,21 @@ int main(int argc, char **argv) {
         }
 
         while (busy_workers < WORKERS) {
-            int next_task = get_next_sjf_task(global_tasks, num_tasks, current_sim_time);
-            if (next_task != -1) {
-                global_tasks[next_task].running = true; // marca a task para execução
-                busy_workers++;
-                pthread_cond_signal(&available); // Acorda um worker
-            } else {
-                break;  // não há task na fila
+            if(sched_method == 0) {
+                sjf_scheduling(&busy_workers);
+            } else if(sched_method == 1) {
+                printf("oi");
+            } else if(sched_method == 2) {
+                printf("oi");
             }
         }
-        pthread_mutex_unlock(&task_lock);
-
-        // avança tempo global
-        usleep(WORK_UNIT * 1000);
-        current_sim_time += (double)WORK_UNIT / 1000.0;
     }
+    
+    pthread_mutex_unlock(&task_lock);
+
+    // avança tempo global
+    usleep(WORK_UNIT * 1000);
+    current_sim_time += (double)WORK_UNIT / 1000.0;
 
     die = 1;
     pthread_cond_broadcast(&available); // faz broadcast com die para encerrar workers
