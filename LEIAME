@@ -1,2 +1,3 @@
-Explicação de como compilar e executar o terminal e o simulador de processos:
+Para compilar os programas ep1 e imesh basta rodar o comando `make all`.
+Os programas depois podem ser executados com `./ep1` e `./imesh`.
 
