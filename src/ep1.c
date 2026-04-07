@@ -102,7 +102,7 @@ void show_output(char* filename) {
                 tr);
     }
 
-    if(preemption_count != -1) {
+    if(preemption_count != 0) {
         fprintf(out_fp, "%d\n",  preemption_count);
     }
     
