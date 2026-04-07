@@ -27,6 +27,7 @@ typedef struct {
     
     // dados a serem salvos durante execução
     double tf;
+    double running_time;
 
     // estado da task
     double time_left;
@@ -56,6 +57,7 @@ Task* tasks_from_trace(char* filename, int* num_tasks) {
         &queue[count].dt) == 4) {
     
         queue[count].tf = 0;
+        queue[count].running_time = 0;
         queue[count].time_left = queue[count].dt;
         queue[count].running = false;
         queue[count].started = false;
@@ -89,7 +91,7 @@ void show_output(char* filename) {
     
     for (int i = 0; i < total_tasks; i++) {
         int cumpriu = (global_tasks[i].tf <= global_tasks[i].deadline) ? 1 : 0;
-        double tr = global_tasks[i].tf - global_tasks[i].t0;
+        double tr = global_tasks[i].running_time;
     
         fprintf(out_fp, "%d %s %.1f %.1f\n", 
                 cumpriu, 
@@ -127,9 +129,12 @@ void sjf_scheduling(int* busy_workers) {
     int next_task = get_next_sjf_task(global_tasks, total_tasks, current_sim_time);
     if (next_task != -1) {
         global_tasks[next_task].running = true; // marca a task para execução
-        busy_workers++;
+        (*busy_workers)++;
         pthread_cond_signal(&available); // Acorda um worker
-    } // índice -1 = não há task na fila
+    } else {
+        // Força a saída do loop de escalonamento se não houver nada pronto
+        *busy_workers = WORKERS; 
+    }
 }
 
 void* sleeper_thread(void* arg) {
@@ -156,12 +161,13 @@ void* sleeper_thread(void* arg) {
             while (t->time_left > 0) {
                 usleep(WORK_UNIT * 1000); 
                 t->time_left -= (double)WORK_UNIT / 1000.0;
+                t->running_time += (double)WORK_UNIT / 1000.0;
             }
 
             pthread_mutex_lock(&task_lock);
             t->finished = true;
             t->running = false;
-            t->tf = current_sim_time;
+            t->tf = current_sim_time - (double)WORK_UNIT / 1000.0; // subtrai o tempo de espera final
             pthread_mutex_unlock(&task_lock);
         }
     }
@@ -175,6 +181,10 @@ void* sleeper_thread(void* arg) {
 // argv[2], arquivo trace de entrada
 // argv[3], arquivo a ser criado para saída
 int main(int argc, char **argv) {
+    if (argc < 4) {
+       fprintf(stderr, "Uso: %s <metodo> <entrada> <saida>\n", argv[0]);
+    return 1;
+}
     int num_tasks = 0, sched_method = atoi(argv[1]);
     global_tasks = tasks_from_trace(argv[2], &num_tasks);
     total_tasks = num_tasks;
