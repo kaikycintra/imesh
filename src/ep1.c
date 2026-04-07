@@ -16,7 +16,6 @@ pthread_mutex_t task_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t  available = PTHREAD_COND_INITIALIZER;
 static int work = 0;
 static int die = 0;
-int next_tasks[WORKERS];    // tasks no topo da fila de prontos
 
 // --------------- LÓGICA DE ENTRADA ---------------
 typedef struct {
@@ -26,11 +25,14 @@ typedef struct {
     double dt;
 
     // dados a serem salvos durante execução
-    double time_left;
     double tf;
-    bool active;
+
+    // estado da task
+    double time_left;
+    bool running;
+    bool started;
     bool preempted;
-    bool is_finished;
+    bool finished;
 } Task;
 
 Task* tasks_from_trace(char* filename, int* num_tasks) {
@@ -44,15 +46,17 @@ Task* tasks_from_trace(char* filename, int* num_tasks) {
     // t0 é quando o processo chega no sistema
     // dt é o tempo de processamento
     while(fscanf(fp, "%31s %lf %lf %lf", 
-            queue[count].name, 
-            &queue[count].deadline, 
-            &queue[count].t0, 
-            &queue[count].dt) == 4) {
-        
-        queue[count].time_left = queue[count].dt;
+        queue[count].name, 
+        &queue[count].deadline, 
+        &queue[count].t0, 
+        &queue[count].dt) == 4) {
+    
         queue[count].tf = 0;
-        queue[count].active = false;
-        queue[count].is_finished = false;
+        queue[count].time_left = queue[count].dt;
+        queue[count].running = false;
+        queue[count].started = false;
+        queue[count].preempted = false;
+        queue[count].finished = false;
 
         count++;
     }
@@ -83,12 +87,20 @@ void show_tasks(Task* tasks, int num_tasks) {
 // round robin
 // escalonamento com prioridade
 
-// coloca tasks mais curtas em next_tasks
-int* sjf_sort(Task* tasks, int num_tasks) {
-    for(int i=0; i < num_tasks; i++) {
-        printf("task: %s | deadline: %.1f | t0: %.1f | dt: %.1f\n", 
-            tasks[i].name, tasks[i].deadline, tasks[i].t0, tasks[i].dt);
+// retorna o índice da próxima task a ser executada no sjf
+int get_next_sjf_task(Task* tasks, int num_tasks, double current_time) {
+    int best_index = -1;
+    double min_dt = 1e9;
+
+    for (int i = 0; i < num_tasks; i++) {
+        if (tasks[i].t0 <= current_time && !tasks[i].finished && !tasks[i].running) {
+            if (tasks[i].dt < min_dt) {
+                min_dt = tasks[i].dt;
+                best_index = i;
+            }
+        }
     }
+    return best_index;
 }
 
 void* sleeper_thread() {
@@ -107,15 +119,17 @@ void* sleeper_thread() {
         }
 
         if(work > 0) {  // trabalha até acabar ou sofrer preempção
-            node_t * temp = head;
-            task->active = true;
+            task->running = true;
 
             while(task->time_left > 0 && !task->preempted) {
                 usleep(WORK_UNIT * 1000); // trabalha 100ms e checa preempção
                 task->time_left = task->time_left - WORK_UNIT/1000;
+                if(task->time_left < 0) {
+                    task->finished = true;
+                }
             }
 
-            task->active = false;
+            task->running = false;
         }
 
         pthread_mutex_unlock(&task_lock);
@@ -135,10 +149,15 @@ int main(int argc, char **argv) {
     Task* tasks = tasks_from_trace(argv[2], &num_tasks);
 
     if (tasks != NULL) {
+        
+        // inicializa workers
+
         // loop do scheduler
+        time_t start = time(NULL);
         while(true) {
     
             // adiciona processo pelo timer
+
             switch(sched_method) {
                 case 0:
                     sjf_sort(tasks, num_tasks);
