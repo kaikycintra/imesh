@@ -17,6 +17,9 @@ pthread_cond_t  available = PTHREAD_COND_INITIALIZER;
 static int work = 0;
 static int die = 0;
 
+int next_tasks[WORKERS];
+Task* global_tasks = NULL;
+
 // --------------- LÓGICA DE ENTRADA ---------------
 typedef struct {
     char name[32];
@@ -103,38 +106,41 @@ int get_next_sjf_task(Task* tasks, int num_tasks, double current_time) {
     return best_index;
 }
 
-void* sleeper_thread() {
-    int ret = 0;
-
+void* sleeper_thread(void* arg) {
     while(true) {
-        ret = pthread_mutex_lock(&task_lock);
-        
-        while(work == 0 && !die) {
-            ret = pthread_cond_wait(&available, &task_lock);
-        }
+        Task* t = NULL;
 
-        if(die) {
-            pthread_mutex_unlock(&task_lock);
-            break;
-        }
-
-        if(work > 0) {  // trabalha até acabar ou sofrer preempção
-            task->running = true;
-
-            while(task->time_left > 0 && !task->preempted) {
-                usleep(WORK_UNIT * 1000); // trabalha 100ms e checa preempção
-                task->time_left = task->time_left - WORK_UNIT/1000;
-                if(task->time_left < 0) {
-                    task->finished = true;
+        pthread_mutex_lock(&task_lock);
+        while(!die) {  // enquanto main(produtor) não para as threads
+            for(int i = 0; i < WORKERS; i++) {
+                int index = next_tasks[i];
+                if(global_tasks[index].running && !global_tasks[index].started) {
+                    t = &global_tasks[i];
+                    t->started = true;
+                    break;
+                    // pega uma thread marcada para rodar pelo escalonador
                 }
             }
-
-            task->running = false;
+            if (t || die) break;
+            pthread_cond_wait(&available, &task_lock);
         }
-
         pthread_mutex_unlock(&task_lock);
-    }
 
+        if(die) break; // 'mata' worker
+
+        if(t) {
+            while (t->time_left > 0) {
+                usleep(WORK_UNIT * 1000); 
+                t->time_left -= (double)WORK_UNIT / 1000.0;
+            }
+
+            pthread_mutex_lock(&task_lock);
+            t->finished = true;
+            t->running = false;
+            //t->tf = time();
+            pthread_mutex_unlock(&task_lock);
+        }
+    }
     return NULL;
 }
 
