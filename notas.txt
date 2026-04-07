@@ -66,3 +66,5 @@ https://man7.org/linux/man-pages/man3/errno.3.html
 https://www.geeksforgeeks.org/c/thread-functions-in-c-c/
 https://sites.cs.ucsb.edu/~rich/class/old.cs170/notes/Threads/index.html
 https://stackoverflow.com/questions/72625285/preempt-a-hot-loop-thread-from-user-space
+https://pubs.opengroup.org/onlinepubs/009604599/functions/pthread_cond_timedwait.html
+https://stackoverflow.com/questions/3501338/c-read-file-line-by-line
