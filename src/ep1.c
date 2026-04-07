@@ -91,7 +91,7 @@ void show_output(char* filename) {
     
     for (int i = 0; i < total_tasks; i++) {
         int cumpriu = (global_tasks[i].tf <= global_tasks[i].deadline) ? 1 : 0;
-        double tr = global_tasks[i].running_time;
+        double tr = global_tasks[i].tf - global_tasks[i].t0;
     
         fprintf(out_fp, "%d %s %.1f %.1f\n", 
                 cumpriu, 
