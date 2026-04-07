@@ -14,11 +14,11 @@
 
 pthread_mutex_t task_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t  available = PTHREAD_COND_INITIALIZER;
-static int work = 0;
 static int die = 0;
 
-int next_tasks[WORKERS];
 Task* global_tasks = NULL;
+int total_tasks = 0;
+double current_sim_time;
 
 // --------------- LÓGICA DE ENTRADA ---------------
 typedef struct {
@@ -112,13 +112,11 @@ void* sleeper_thread(void* arg) {
 
         pthread_mutex_lock(&task_lock);
         while(!die) {  // enquanto main(produtor) não para as threads
-            for(int i = 0; i < WORKERS; i++) {
-                int index = next_tasks[i];
-                if(global_tasks[index].running && !global_tasks[index].started) {
+            for(int i = 0; i < total_tasks; i++) {
+                if(global_tasks[i].running && !global_tasks[i].started) {
                     t = &global_tasks[i];
                     t->started = true;
                     break;
-                    // pega uma thread marcada para rodar pelo escalonador
                 }
             }
             if (t || die) break;
@@ -152,31 +150,50 @@ void* sleeper_thread(void* arg) {
 // argv[3], arquivo a ser criado para saída
 int main(int argc, char **argv) {
     int num_tasks = 0, sched_method = atoi(argv[1]);
-    Task* tasks = tasks_from_trace(argv[2], &num_tasks);
+    global_tasks = tasks_from_trace(argv[2], &num_tasks);
+    total_tasks = num_tasks;
 
-    if (tasks != NULL) {
-        
-        // inicializa workers
+    // inicializa workers com sleeper_threads
+    pthread_t workers[WORKERS];
+    for (int i = 0; i < WORKERS; i++) {
+        pthread_create(&workers[i], NULL, sleeper_thread, NULL);
+    }
 
-        // loop do scheduler
-        time_t start = time(NULL);
-        while(true) {
-    
-            // adiciona processo pelo timer
+    // loop de execução produtor consumidor
+    int tasks_finished = 0;
+    while (tasks_finished < num_tasks) {
+        pthread_mutex_lock(&task_lock);
 
-            switch(sched_method) {
-                case 0:
-                    sjf_sort(tasks, num_tasks);
-                    // pthread_cond_broadcast()
-                    break;
-                case 1:
-                    break;
-                case 2:
-                    break;
-                
+        int busy_workers = 0;
+        tasks_finished = 0;
+        for (int i = 0; i < num_tasks; i++) {
+            if (global_tasks[i].running) busy_workers++;
+            if (global_tasks[i].finished) tasks_finished++;
+        }
+
+        while (busy_workers < WORKERS) {
+            int next_task = get_next_sjf_task(global_tasks, num_tasks, current_sim_time);
+            if (next_task != -1) {
+                global_tasks[next_task].running = true; // marca a task para execução
+                busy_workers++;
+                pthread_cond_signal(&available); // Acorda um worker
+            } else {
+                break;  // não há task na fila
             }
         }
-        free(tasks);
+        pthread_mutex_unlock(&task_lock);
+
+        // avança tempo global
+        usleep(WORK_UNIT * 1000);
+        current_sim_time += (double)WORK_UNIT / 1000.0;
     }
+
+    die = 1;
+    pthread_cond_broadcast(&available); // faz broadcast com die para encerrar workers
+    for (int i = 0; i < WORKERS; i++) pthread_join(workers[i], NULL);
+
+    // escrever no arquivo de saída a partir de global_tasks
+    
+    free(global_tasks);
     return 0;
 }
